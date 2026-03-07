@@ -1,5 +1,5 @@
 services:
-  db:
+  pg:
     image: postgres:16-alpine
     container_name: node_hex_db
     environment:
@@ -21,11 +21,11 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      DATABASE_URL: postgres://postgres:postgres@db:5432/hexagonal_demo
+      DATABASE_URL: postgres://postgres:postgres@pg:5432/hexagonal_demo
       MONGODB_URL: mongodb://mongo:mongo@mongodb:27017/hexagonal_demo?authSource=admin
     command: npm run migrate-db-up
     depends_on:
-      db:
+      pg:
         condition: service_healthy
       mongodb:
         condition: service_healthy
@@ -37,7 +37,7 @@ services:
     environment:
       PORT: "3001"
       DB_TYPE: postgres
-      DATABASE_URL: postgres://postgres:postgres@db:5432/hexagonal_demo
+      DATABASE_URL: postgres://postgres:postgres@pg:5432/hexagonal_demo
     ports:
       - "3001:3001"
     depends_on:

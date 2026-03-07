@@ -7,16 +7,20 @@
   "type": "commonjs",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "start": "tsx src/index.ts",
-    "dev": "tsx watch src/index.ts",
-    "pg:migrate-db-up": "node-pg-migrate -m ./migrations/psql --host db --port 5432 --database hexagonal_demo --user postgres --password postgres up",
-    "pg:migrate-db-down": "node-pg-migrate -m ./migrations/psql --host db --port 5432 --database hexagonal_demo --user postgres --password postgres down",
+    "start": "tsx --env-file-if-exists=.env src/index.ts",
+    "start:pg": "DB_TYPE=postgres tsx watch --env-file-if-exists=.env src/index.ts",
+    "start:mongodb": "DB_TYPE=mongodb tsx watch --env-file-if-exists=.env src/index.ts",
+    "dev": "tsx watch --env-file-if-exists=.env src/index.ts",
+    "pg:migrate-db-up": "node --env-file-if-exists=.env ./node_modules/.bin/node-pg-migrate -m ./migrations/psql up",
+    "pg:migrate-db-down": "node --env-file-if-exists=.env ./node_modules/.bin/node-pg-migrate -m ./migrations/psql down",
     "mongo:migrate-db-up": "migrate-mongo up -f migrations/mongo/migrate-mongo-config.js",
     "mongo:migrate-db-down": "migrate-mongo down -f migrations/mongo/migrate-mongo-config.js",
     "migrate-db-up": "npm run pg:migrate-db-up && npm run mongo:migrate-db-up",
     "migrate-db-down": "npm run mongo:migrate-db-down && npm run pg:migrate-db-down",
     "demo:up": "docker compose -f compose.yaml up --build",
-    "demo:down": "docker compose -f compose.yaml down -v"
+    "demo:down": "docker compose -f compose.yaml down -v",
+    "db:up": "docker compose -f compose.yaml up pg mongodb -d",
+    "db:down": "docker compose -f compose.yaml down pg mongodb"
   },
   "dependencies": {
     "express": "^4.21.2",
