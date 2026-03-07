@@ -1,0 +1,35 @@
+{
+  "name": "node-example",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Hexagonal architecture example in Node.js + TypeScript",
+  "main": "dist/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts",
+    "pg:migrate-db-up": "node-pg-migrate -m ./migrations/psql --host db --port 5432 --database hexagonal_demo --user postgres --password postgres up",
+    "pg:migrate-db-down": "node-pg-migrate -m ./migrations/psql --host db --port 5432 --database hexagonal_demo --user postgres --password postgres down",
+    "mongo:migrate-db-up": "migrate-mongo up -f migrations/mongo/migrate-mongo-config.js",
+    "mongo:migrate-db-down": "migrate-mongo down -f migrations/mongo/migrate-mongo-config.js",
+    "migrate-db-up": "npm run pg:migrate-db-up && npm run mongo:migrate-db-up",
+    "migrate-db-down": "npm run mongo:migrate-db-down && npm run pg:migrate-db-down",
+    "demo:up": "docker compose -f compose.yaml up --build",
+    "demo:down": "docker compose -f compose.yaml down -v"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "mongodb": "^6.13.0",
+    "pg": "^8.14.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/node": "^22.15.3",
+    "@types/pg": "^8.11.11",
+    "migrate-mongo": "^11.0.0",
+    "node-pg-migrate": "^7.9.1",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.2"
+  }
+}

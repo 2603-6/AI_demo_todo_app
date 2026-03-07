@@ -1,0 +1,69 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: node_hex_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: hexagonal_demo
+    ports:   
+      - "5435:5432"
+    volumes:
+      - node_hex_db_data:/var/lib/postgresql/data
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@db:5432/hexagonal_demo
+      MONGODB_URL: mongodb://mongo:mongo@mongodb:27017/hexagonal_demo?authSource=admin
+    command: npm run migrate-db-up
+    depends_on:
+      - db
+      - mongodb
+
+  app_postgres:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      PORT: "3001"
+      DB_TYPE: postgres
+      DATABASE_URL: postgres://postgres:postgres@db:5432/hexagonal_demo
+    ports:
+      - "3001:3001"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  mongodb:
+    image: mongo:8-noble
+    container_name: node_hex_mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongo
+      MONGO_INITDB_ROOT_PASSWORD: mongo
+      MONGO_INITDB_DATABASE: hexagonal_demo
+    ports:
+      - "27017:27017"
+    volumes:
+      - node_hex_mongodb_data:/data/db
+
+  app_mongodb:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      PORT: "3002"
+      DB_TYPE: mongodb
+      DATABASE_URL: mongodb://mongo:mongo@mongodb:27017/hexagonal_demo?authSource=admin
+      MONGODB_URL: mongodb://mongo:mongo@mongodb:27017/hexagonal_demo?authSource=admin
+    ports:
+      - "3002:3002"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  node_hex_db_data:
+  node_hex_mongodb_data:
