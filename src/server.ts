@@ -2,9 +2,9 @@ import express, { Express, NextFunction, Request, Response } from 'express';
 import { createUserRoutes } from './user/routes/userRoutes';
 import { Pool } from 'pg';
 import { MongoClient } from 'mongodb';
-import { getRepositoryType } from './config';
 import { createUserRepository } from './user/repository/userRepositoryFactory';
 import { UserService } from './user/service/UserService';
+import { getDBClient } from './shared/DBClient';
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) {
@@ -13,8 +13,6 @@ function getErrorMessage(error: unknown): string {
 
   return 'Unexpected error';
 }
-
-type DBClient = Pool | MongoClient | null;
 
 const DB_CLIENT_CREATORS = {
   file: (): null => null,
@@ -34,13 +32,8 @@ const DB_CLIENT_CREATORS = {
   },
 } as const;
 
-function getDBClient(): DBClient {
-  const type = getRepositoryType();
-  return DB_CLIENT_CREATORS[type]();
-}
-
 export function createApp(): Express {
-  const dbClient = getDBClient();
+  const dbClient = getDBClient()
   const userRepository = createUserRepository(dbClient);
   const userService = new UserService(userRepository);
 
