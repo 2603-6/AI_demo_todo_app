@@ -63,8 +63,7 @@ export class InMemoryUserRepository extends UserRepositoryPort {
     return error instanceof Error && 'code' in error;
   }
 
-  // shouldn't `isUser` show that `value is User`? I believe that a User interface should be created
-  private isUser(value: unknown): value is { id: string; name: string; email: string } {
+  private isUser(value: unknown): value is User {
     if (typeof value !== 'object' || value === null) {
       return false;
     }
