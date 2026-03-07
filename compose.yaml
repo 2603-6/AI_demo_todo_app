@@ -10,6 +10,11 @@ services:
       - "5435:5432"
     volumes:
       - node_hex_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
 
   migrate:
     build:
@@ -20,8 +25,10 @@ services:
       MONGODB_URL: mongodb://mongo:mongo@mongodb:27017/hexagonal_demo?authSource=admin
     command: npm run migrate-db-up
     depends_on:
-      - db
-      - mongodb
+      db:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
 
   app_postgres:
     build:
@@ -40,6 +47,7 @@ services:
   mongodb:
     image: mongo:8-noble
     container_name: node_hex_mongodb
+    command: ["mongod", "--quiet", "--logpath", "/dev/null"]
     environment:
       MONGO_INITDB_ROOT_USERNAME: mongo
       MONGO_INITDB_ROOT_PASSWORD: mongo
@@ -48,6 +56,11 @@ services:
       - "27017:27017"
     volumes:
       - node_hex_mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
 
   app_mongodb:
     build:

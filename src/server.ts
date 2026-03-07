@@ -32,8 +32,13 @@ const DB_CLIENT_CREATORS = {
   },
 } as const;
 
-export function createApp(): Express {
-  const dbClient = getDBClient()
+export async function createApp(): Promise<Express> {
+  const dbClient = getDBClient();
+
+  if (dbClient.type === 'mongodb') {
+    await dbClient.client.connect();
+  }
+
   const userRepository = createUserRepository(dbClient);
   const userService = new UserService(userRepository);
 

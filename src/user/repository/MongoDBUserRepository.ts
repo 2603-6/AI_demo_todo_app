@@ -20,7 +20,7 @@ export class MongoDBUserRepository extends UserRepositoryPort {
   }
 
   public async save(user: User): Promise<User> {
-    const collection = await this.getCollection();
+    const collection = this.getCollection();
 
     await collection.insertOne({
       _id: user.id,
@@ -33,7 +33,7 @@ export class MongoDBUserRepository extends UserRepositoryPort {
   }
 
   public async findAll(): Promise<User[]> {
-    const collection = await this.getCollection();
+    const collection = this.getCollection();
 
     const documents = await collection
       .find({})
@@ -48,15 +48,14 @@ export class MongoDBUserRepository extends UserRepositoryPort {
   }
 
   public async existsByEmail(email: string): Promise<boolean> {
-    const collection = await this.getCollection();
+    const collection = this.getCollection();
     const normalized = email.trim().toLowerCase();
 
     const count = await collection.countDocuments({ email: normalized });
     return count > 0;
   }
 
-  private async getCollection(): Promise<Collection<UserDocument>> {
-    await this.client.connect();
+  private getCollection(): Collection<UserDocument> {
     const db: Db = this.client.db(this.dbName);
     return db.collection<UserDocument>('users');
   }

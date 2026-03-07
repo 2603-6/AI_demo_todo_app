@@ -1,7 +1,7 @@
 import { createApp } from './server';
 
-function bootstrap(): void {
-  const app = createApp();
+async function bootstrap(): Promise<void> {
+  const app = await createApp();
   const port = Number(process.env.PORT ?? 3001);
   
   app.listen(port, () => {
