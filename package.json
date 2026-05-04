@@ -1,38 +1,32 @@
 {
-  "name": "node-example",
+  "name": "ai-todo-app",
   "version": "1.0.0",
   "private": true,
-  "description": "Hexagonal architecture example in Node.js + TypeScript",
-  "main": "dist/index.js",
+  "description": "Distributed AI todo app using hexagonal architecture, gRPC, OpenAI, and ClickHouse",
   "type": "commonjs",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "start": "tsx --env-file-if-exists=.env src/index.ts",
-    "start:pg": "DB_TYPE=postgres tsx watch --env-file-if-exists=.env src/index.ts",
-    "start:mongodb": "DB_TYPE=mongodb tsx watch --env-file-if-exists=.env src/index.ts",
-    "dev": "tsx watch --env-file-if-exists=.env src/index.ts",
-    "pg:migrate-db-up": "node --env-file-if-exists=.env ./node_modules/.bin/node-pg-migrate -m ./migrations/psql up",
-    "pg:migrate-db-down": "node --env-file-if-exists=.env ./node_modules/.bin/node-pg-migrate -m ./migrations/psql down",
-    "mongo:migrate-db-up": "migrate-mongo up -f migrations/mongo/migrate-mongo-config.js",
-    "mongo:migrate-db-down": "migrate-mongo down -f migrations/mongo/migrate-mongo-config.js",
-    "migrate-db-up": "npm run pg:migrate-db-up && npm run mongo:migrate-db-up",
-    "migrate-db-down": "npm run mongo:migrate-db-down && npm run pg:migrate-db-down",
+    "start:api": "tsx --env-file-if-exists=.env src/api-service/index.ts",
+    "start:app": "tsx --env-file-if-exists=.env src/app-service/index.ts",
+    "dev:api": "tsx watch --env-file-if-exists=.env src/api-service/index.ts",
+    "dev:app": "tsx watch --env-file-if-exists=.env src/app-service/index.ts",
     "demo:up": "docker compose -f compose.yaml up --build",
     "demo:down": "docker compose -f compose.yaml down -v",
-    "db:up": "docker compose -f compose.yaml up pg mongodb -d",
-    "db:down": "docker compose -f compose.yaml down pg mongodb"
+    "db:up": "docker compose -f compose.yaml up clickhouse -d",
+    "db:down": "docker compose -f compose.yaml down clickhouse"
   },
   "dependencies": {
+    "@clickhouse/client": "^1.11.1",
+    "@grpc/grpc-js": "^1.13.4",
+    "@grpc/proto-loader": "^0.7.15",
+    "cors": "^2.8.6",
     "express": "^4.21.2",
-    "mongodb": "^6.13.0",
-    "pg": "^8.14.1"
+    "openai": "^4.98.0"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/node": "^22.15.3",
-    "@types/pg": "^8.11.11",
-    "migrate-mongo": "^11.0.0",
-    "node-pg-migrate": "^7.9.1",
     "tsx": "^4.19.4",
     "typescript": "^5.8.2"
   }

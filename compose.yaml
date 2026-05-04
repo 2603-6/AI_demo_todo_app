@@ -1,82 +1,74 @@
 services:
-  pg:
-    image: postgres:16-alpine
-    container_name: node_hex_db
+  clickhouse:
+    image: clickhouse/clickhouse-server:24-alpine
+    container_name: ai_todo_clickhouse
+    cap_add:
+      - SYS_NICE
+      - NET_ADMIN
+      - IPC_LOCK
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: hexagonal_demo
-    ports:   
-      - "5435:5432"
+      CLICKHOUSE_DB: todos
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+    ports:
+      - "8123:8123"
+      - "9000:9000"
     volumes:
-      - node_hex_db_data:/var/lib/postgresql/data
+      - ai_todo_clickhouse_data:/var/lib/clickhouse
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 3s
-      timeout: 3s
-      retries: 5
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:8123/ping || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
 
-  migrate:
+  app-service:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        SERVICE: app-service
     environment:
-      DATABASE_URL: postgres://postgres:postgres@pg:5432/hexagonal_demo
-      MONGODB_URL: mongodb://mongo:mongo@mongodb:27017/hexagonal_demo?authSource=admin
-    command: npm run migrate-db-up
+      GRPC_PORT: "50051"
+      OPENAI_API_KEY: "${OPENAI_API_KEY}"
+      CLICKHOUSE_URL: "http://clickhouse:8123"
+      CLICKHOUSE_DB: todos
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ""
+    expose:
+      - "50051"
     depends_on:
-      pg:
-        condition: service_healthy
-      mongodb:
+      clickhouse:
         condition: service_healthy
 
-  app_postgres:
+  api-service:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        SERVICE: api-service
     environment:
       PORT: "3001"
-      DB_TYPE: postgres
-      DATABASE_URL: postgres://postgres:postgres@pg:5432/hexagonal_demo
+      APP_SERVICE_URL: "app-service:50051"
     ports:
       - "3001:3001"
     depends_on:
-      migrate:
-        condition: service_completed_successfully
+      - app-service
 
-  mongodb:
-    image: mongo:8-noble
-    container_name: node_hex_mongodb
-    command: ["mongod", "--quiet", "--logpath", "/dev/null"]
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: mongo
-      MONGO_INITDB_ROOT_PASSWORD: mongo
-      MONGO_INITDB_DATABASE: hexagonal_demo
-    ports:
-      - "27017:27017"
-    volumes:
-      - node_hex_mongodb_data:/data/db
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 3s
-      timeout: 3s
-      retries: 5
-
-  app_mongodb:
+  frontend:
     build:
-      context: .
+      context: ./frontend
       dockerfile: Dockerfile
     environment:
-      PORT: "3002"
-      DB_TYPE: mongodb
-      DATABASE_URL: mongodb://mongo:mongo@mongodb:27017/hexagonal_demo?authSource=admin
-      MONGODB_URL: mongodb://mongo:mongo@mongodb:27017/hexagonal_demo?authSource=admin
+      VITE_API_URL: "http://localhost:3001"
     ports:
-      - "3002:3002"
+      - "5173:5173"
     depends_on:
-      migrate:
-        condition: service_completed_successfully
+      - api-service
 
 volumes:
-  node_hex_db_data:
-  node_hex_mongodb_data:
+  ai_todo_clickhouse_data:
