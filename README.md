@@ -31,6 +31,7 @@ Communication between the API and App services uses Protocol Buffers over gRPC (
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or Docker Engine + Compose)
 - An [OpenAI API key](https://platform.openai.com/api-keys)
+- A [Grafana Cloud](https://grafana.com/auth/sign-up/create-user) account for observability (traces, metrics, logs via Alloy)
 
 ## Quick Start
 
@@ -40,10 +41,14 @@ Communication between the API and App services uses Protocol Buffers over gRPC (
 cp .env.example .env
 ```
 
-Open `.env` and set your OpenAI API key:
+Open `.env` and fill in the required keys:
 
 ```
 OPENAI_API_KEY=sk-...
+
+# From your Grafana Cloud stack → Details → OpenTelemetry
+GRAFANA_OTLP_USERNAME=your-instance-id
+GRAFANA_OTLP_API_KEY=your-api-key
 ```
 
 ### 2. Start all services
@@ -115,6 +120,8 @@ npm run db:down
 | Variable | Default | Description |
 |---|---|---|
 | `OPENAI_API_KEY` | — | **Required.** Your OpenAI API key |
+| `GRAFANA_OTLP_USERNAME` | — | **Required.** Grafana Cloud instance ID (found under Stack → OpenTelemetry) |
+| `GRAFANA_OTLP_API_KEY` | — | **Required.** Grafana Cloud API key with metrics/logs/traces write permissions |
 | `PORT` | `3001` | HTTP port for the API service |
 | `APP_SERVICE_URL` | `localhost:50051` | gRPC address of the app-service |
 | `GRPC_PORT` | `50051` | gRPC port for the app-service |

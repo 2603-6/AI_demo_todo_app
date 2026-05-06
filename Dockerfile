@@ -15,4 +15,5 @@ COPY proto ./proto
 EXPOSE 3001
 EXPOSE 50051
 
-CMD ["sh", "-c", "npx tsx src/${SERVICE}/index.ts"]
+CMD ["sh", "-c", "npx tsx --import ./src/${SERVICE}/instrumentation.ts src/${SERVICE}/index.ts"]
+

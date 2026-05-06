@@ -16,9 +16,13 @@
     "db:down": "docker compose -f compose.yaml down clickhouse"
   },
   "dependencies": {
+    "@arizeai/openinference-instrumentation-openai": "^4.1.0",
     "@clickhouse/client": "^1.11.1",
     "@grpc/grpc-js": "^1.13.4",
     "@grpc/proto-loader": "^0.7.15",
+    "@opentelemetry/auto-instrumentations-node": "^0.75.0",
+    "@opentelemetry/instrumentation-openai": "^0.15.0",
+    "@opentelemetry/sdk-node": "^0.217.0",
     "cors": "^2.8.6",
     "express": "^4.21.2",
     "openai": "^4.98.0"
