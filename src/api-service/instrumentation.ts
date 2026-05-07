@@ -2,7 +2,7 @@ import { NodeSDK } from '@opentelemetry/sdk-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
-import { OpenAIInstrumentation } from '@arizeai/openinference-instrumentation-openai';
+// import { OpenAIInstrumentation } from '@arizeai/openinference-instrumentation-openai';
 import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 
 const sdk = new NodeSDK({
@@ -12,7 +12,7 @@ const sdk = new NodeSDK({
   }),
   instrumentations: [
     getNodeAutoInstrumentations(),
-    new OpenAIInstrumentation(),
+    // new OpenAIInstrumentation(),
   ],
   serviceName: 'app-service',
 });
