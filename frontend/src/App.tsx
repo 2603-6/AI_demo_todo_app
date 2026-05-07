@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { generateTodoList, listTodoLists } from './api';
+import { generateTodoList, listTodoLists, detectIntent, sendMessage, completeTodoList } from './api';
 import type { TodoList } from './types';
 import { PromptForm } from './components/PromptForm';
 import { TodoListCard } from './components/TodoListCard';
@@ -42,15 +42,55 @@ export default function App() {
     );
   }
 
+  function handleListUpdated(updatedList: TodoList) {
+    setLists((prev) =>
+      prev.map((list) => list.id === updatedList.id ? updatedList : list),
+    );
+  }
+
+  function handleListCompleted(updatedList: TodoList) {
+    setLists((prev) =>
+      prev.map((list) => list.id === updatedList.id ? updatedList : list),
+    );
+  }
+
   async function handleGenerate(prompt: string) {
     setGenerating(true);
     setError(null);
     try {
-      const newList = await generateTodoList(prompt);
-      setLists((prev) => [newList, ...prev]);
-      setSelectedId(newList.id);
+      if (lists.length === 0) {
+        const newList = await generateTodoList(prompt);
+        setLists((prev) => [newList, ...prev]);
+        setSelectedId(newList.id);
+        return;
+      }
+
+      const listSummaries = lists.map((l) => ({ id: l.id, prompt: l.prompt }));
+      const intent = await detectIntent(prompt, listSummaries);
+
+      if (intent.action === 'create') {
+        const newList = await generateTodoList(intent.message);
+        setLists((prev) => [newList, ...prev]);
+        setSelectedId(newList.id);
+      } else if (intent.action === 'refine' && intent.list_id) {
+        const updatedList = await sendMessage(intent.list_id, intent.message);
+        handleListUpdated(updatedList);
+        setSelectedId(intent.list_id);
+      } else if (intent.action === 'complete' && intent.list_id) {
+        const updatedList = await completeTodoList(intent.list_id, true);
+        handleListCompleted(updatedList);
+        setSelectedId(intent.list_id);
+      } else if (intent.action === 'uncomplete' && intent.list_id) {
+        const updatedList = await completeTodoList(intent.list_id, false);
+        handleListCompleted(updatedList);
+        setSelectedId(intent.list_id);
+      } else {
+        const newList = await generateTodoList(intent.message);
+        setLists((prev) => [newList, ...prev]);
+        setSelectedId(newList.id);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate list');
+      setError(err instanceof Error ? err.message : 'Failed to process request');
     } finally {
       setGenerating(false);
     }
@@ -105,6 +145,8 @@ export default function App() {
           list={selected}
           onClose={() => setSelectedId(null)}
           onItemToggle={handleItemToggle}
+          onListUpdated={handleListUpdated}
+          onListCompleted={handleListCompleted}
         />
       )}
     </div>

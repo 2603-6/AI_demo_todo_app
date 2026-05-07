@@ -7,6 +7,9 @@ service TodoService {
   rpc GetTodoList (GetTodoListRequest) returns (TodoListResponse);
   rpc ListTodoLists (ListTodoListsRequest) returns (TodoListsResponse);
   rpc UpdateTodoItem (UpdateTodoItemRequest) returns (UpdateTodoItemResponse);
+  rpc SendMessage (SendMessageRequest) returns (TodoListResponse);
+  rpc CompleteTodoList (CompleteTodoListRequest) returns (TodoListResponse);
+  rpc DetectIntent (DetectIntentRequest) returns (DetectIntentResponse);
 }
 
 message GenerateRequest {
@@ -19,6 +22,16 @@ message GetTodoListRequest {
 
 message ListTodoListsRequest {}
 
+message SendMessageRequest {
+  string list_id = 1;
+  string message = 2;
+}
+
+message CompleteTodoListRequest {
+  string id = 1;
+  bool completed = 2;
+}
+
 message TodoItem {
   string id = 1;
   string list_id = 2;
@@ -27,15 +40,41 @@ message TodoItem {
   int32 position = 5;
 }
 
+message ConversationMessage {
+  string id = 1;
+  string list_id = 2;
+  string role = 3;
+  string content = 4;
+  int32 position = 5;
+}
+
 message TodoListResponse {
   string id = 1;
   string prompt = 2;
   repeated TodoItem items = 3;
   string created_at = 4;
+  repeated ConversationMessage messages = 5;
+  bool completed = 6;
 }
 
 message TodoListsResponse {
   repeated TodoListResponse lists = 1;
+}
+
+message ListSummary {
+  string id = 1;
+  string prompt = 2;
+}
+
+message DetectIntentRequest {
+  string prompt = 1;
+  repeated ListSummary lists = 2;
+}
+
+message DetectIntentResponse {
+  string action = 1;
+  string list_id = 2;
+  string message = 3;
 }
 
 message UpdateTodoItemRequest {

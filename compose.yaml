@@ -27,6 +27,7 @@ services:
       start_period: 30s
 
   app-service:
+    container_name: ai_todo_app_service
     build:
       context: .
       dockerfile: Dockerfile
@@ -42,6 +43,9 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://alloy:4318"
       OTEL_SERVICE_NAME: "app-service"
       OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
+      MONOCLE_EXPORTER: "console"
+      MONOCLE_DEBUG: "true"
+      OTEL_LOG_LEVEL: "debug"
     expose:
       - "50051"
     depends_on:

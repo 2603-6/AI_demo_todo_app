@@ -1,10 +1,11 @@
 import { createClient, type ClickHouseClient } from '@clickhouse/client';
-import { createTodoList, createTodoItem, type TodoList, type TodoItem } from '../Todo';
+import { createTodoList, createTodoItem, type TodoList, type TodoItem, type ConversationMessage } from '../Todo';
 import type { TodoRepositoryPort } from '../TodoRepositoryPort';
 
 interface TodoListRow {
   id: string;
   prompt: string;
+  completed: number;
   created_at: string;
 }
 
@@ -13,6 +14,14 @@ interface TodoItemRow {
   list_id: string;
   title: string;
   completed: number;
+  position: number;
+}
+
+interface ConversationMessageRow {
+  id: string;
+  list_id: string;
+  role: string;
+  content: string;
   position: number;
 }
 
@@ -44,12 +53,16 @@ export async function initClickHouseSchema(client: ClickHouseClient): Promise<vo
 
   await drainExec(client, `
     CREATE TABLE IF NOT EXISTS ${db}.todo_lists (
-      id       UUID,
-      prompt   String,
+      id         UUID,
+      prompt     String,
+      completed  UInt8 DEFAULT 0,
       created_at DateTime DEFAULT now()
     ) ENGINE = MergeTree()
     ORDER BY (created_at, id)
   `);
+
+  // Safe migration for existing tables that predate the completed column
+  await drainExec(client, `ALTER TABLE ${db}.todo_lists ADD COLUMN IF NOT EXISTS completed UInt8 DEFAULT 0`);
 
   await drainExec(client, `
     CREATE TABLE IF NOT EXISTS ${db}.todo_items (
@@ -57,6 +70,18 @@ export async function initClickHouseSchema(client: ClickHouseClient): Promise<vo
       list_id    UUID,
       title      String,
       completed  UInt8 DEFAULT 0,
+      position   UInt16,
+      created_at DateTime DEFAULT now()
+    ) ENGINE = MergeTree()
+    ORDER BY (list_id, position, id)
+  `);
+
+  await drainExec(client, `
+    CREATE TABLE IF NOT EXISTS ${db}.conversation_messages (
+      id         UUID,
+      list_id    UUID,
+      role       String,
+      content    String,
       position   UInt16,
       created_at DateTime DEFAULT now()
     ) ENGINE = MergeTree()
@@ -97,9 +122,60 @@ export class ClickHouseTodoRepository implements TodoRepositoryPort {
     });
   }
 
+  async saveMessages(messages: ConversationMessage[]): Promise<void> {
+    if (messages.length === 0) return;
+
+    await this.client.insert({
+      table: 'conversation_messages',
+      values: messages.map((msg) => ({
+        id: msg.id,
+        list_id: msg.listId,
+        role: msg.role,
+        content: msg.content,
+        position: msg.position,
+      })),
+      format: 'JSONEachRow',
+    });
+  }
+
+  async getMessages(listId: string): Promise<ConversationMessage[]> {
+    const result = await this.client.query({
+      query: `SELECT id, list_id, role, content, position FROM conversation_messages WHERE list_id = {listId:UUID} ORDER BY position`,
+      query_params: { listId },
+      format: 'JSONEachRow',
+    });
+
+    const rows = await result.json<ConversationMessageRow>();
+    return rows.map((row) => ({
+      id: row.id,
+      listId: row.list_id,
+      role: row.role as 'user' | 'assistant',
+      content: row.content,
+      position: row.position,
+    }));
+  }
+
+  async replaceItems(listId: string, items: TodoItem[]): Promise<void> {
+    const db = process.env.CLICKHOUSE_DB ?? 'todos';
+    await drainExec(
+      this.client,
+      `ALTER TABLE ${db}.todo_items DELETE WHERE list_id = '${listId}' SETTINGS mutations_sync = 1`,
+    );
+    await this.saveTodoItems(items);
+  }
+
+  async completeTodoList(id: string, completed: boolean): Promise<void> {
+    const db = process.env.CLICKHOUSE_DB ?? 'todos';
+    const val = completed ? 1 : 0;
+    await drainExec(
+      this.client,
+      `ALTER TABLE ${db}.todo_lists UPDATE completed = ${val} WHERE id = '${id}' SETTINGS mutations_sync = 1`,
+    );
+  }
+
   async findTodoListById(id: string): Promise<TodoList | null> {
     const listResult = await this.client.query({
-      query: `SELECT id, prompt, created_at FROM todo_lists WHERE id = {id:UUID} LIMIT 1`,
+      query: `SELECT id, prompt, completed, created_at FROM todo_lists WHERE id = {id:UUID} LIMIT 1`,
       query_params: { id },
       format: 'JSONEachRow',
     });
@@ -108,19 +184,24 @@ export class ClickHouseTodoRepository implements TodoRepositoryPort {
     if (rows.length === 0) return null;
 
     const row = rows[0];
-    const items = await this.fetchItemsForList(id);
+    const [items, messages] = await Promise.all([
+      this.fetchItemsForList(id),
+      this.getMessages(id),
+    ]);
 
     return createTodoList({
       id: row.id,
       prompt: row.prompt,
+      completed: row.completed === 1,
       items,
+      messages,
       createdAt: new Date(row.created_at),
     });
   }
 
   async findAllTodoLists(): Promise<TodoList[]> {
     const listResult = await this.client.query({
-      query: `SELECT id, prompt, created_at FROM todo_lists ORDER BY created_at DESC`,
+      query: `SELECT id, prompt, completed, created_at FROM todo_lists ORDER BY created_at DESC`,
       format: 'JSONEachRow',
     });
 
@@ -132,6 +213,7 @@ export class ClickHouseTodoRepository implements TodoRepositoryPort {
         return createTodoList({
           id: row.id,
           prompt: row.prompt,
+          completed: row.completed === 1,
           items,
           createdAt: new Date(row.created_at),
         });

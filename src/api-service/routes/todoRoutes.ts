@@ -54,5 +54,62 @@ export function createTodoRoutes({
       .catch(next);
   });
 
+  router.patch('/todo-lists/:id', (req: Request, res: Response, next: NextFunction): void => {
+    const id = String(req.params['id'] ?? '');
+    const completed = typeof req.body?.completed === 'boolean' ? req.body.completed : true;
+
+    todoGrpcClient
+      .completeTodoList(id, completed)
+      .then((list) => res.status(200).json(list))
+      .catch((err: unknown) => {
+        const grpcErr = err as { code?: number; message?: string };
+        if (grpcErr.code === 5) {
+          res.status(404).json({ error: 'Todo list not found' });
+          return;
+        }
+        next(err);
+      });
+  });
+
+  router.post('/todo-lists/:id/messages', (req: Request, res: Response, next: NextFunction): void => {
+    const listId = String(req.params['id'] ?? '');
+    const message = typeof req.body?.message === 'string' ? req.body.message.trim() : '';
+    if (!message) {
+      res.status(400).json({ error: 'message is required' });
+      return;
+    }
+
+    todoGrpcClient
+      .sendMessage(listId, message)
+      .then((list) => res.status(200).json(list))
+      .catch((err: unknown) => {
+        const grpcErr = err as { code?: number; message?: string };
+        if (grpcErr.code === 5) {
+          res.status(404).json({ error: 'Todo list not found' });
+          return;
+        }
+        next(err);
+      });
+  });
+
+  router.post('/intent', (req: Request, res: Response, next: NextFunction): void => {
+    const prompt = typeof req.body?.prompt === 'string' ? req.body.prompt.trim() : '';
+    if (!prompt) {
+      res.status(400).json({ error: 'prompt is required' });
+      return;
+    }
+
+    const lists: { id: string; prompt: string }[] = Array.isArray(req.body?.lists)
+      ? (req.body.lists as { id?: unknown; prompt?: unknown }[])
+          .filter((l) => typeof l.id === 'string' && typeof l.prompt === 'string')
+          .map((l) => ({ id: l.id as string, prompt: l.prompt as string }))
+      : [];
+
+    todoGrpcClient
+      .detectIntent(prompt, lists)
+      .then((result) => res.status(200).json(result))
+      .catch(next);
+  });
+
   return router;
 }

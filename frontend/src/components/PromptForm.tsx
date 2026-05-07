@@ -23,7 +23,7 @@ export function PromptForm({ onSubmit, loading }: Props) {
         <input
           className={styles.input}
           type="text"
-          placeholder="e.g. Plan a road trip to the Grand Canyon…"
+          placeholder="Create a list, or ask about an existing one…"
           value={value}
           onChange={(e) => setValue(e.target.value)}
           disabled={loading}
@@ -33,7 +33,7 @@ export function PromptForm({ onSubmit, loading }: Props) {
           {loading ? (
             <span className={styles.spinner} />
           ) : (
-            'Generate'
+            'Go'
           )}
         </button>
       </div>

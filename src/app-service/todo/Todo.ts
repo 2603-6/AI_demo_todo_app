@@ -6,10 +6,20 @@ export interface TodoItem {
   position: number;
 }
 
+export interface ConversationMessage {
+  id: string;
+  listId: string;
+  role: 'user' | 'assistant';
+  content: string;
+  position: number;
+}
+
 export interface TodoList {
   id: string;
   prompt: string;
   items: TodoItem[];
+  messages: ConversationMessage[];
+  completed: boolean;
   createdAt: Date;
 }
 
@@ -18,6 +28,8 @@ export function createTodoList(params: {
   prompt: string;
   items: TodoItem[];
   createdAt: Date;
+  messages?: ConversationMessage[];
+  completed?: boolean;
 }): TodoList {
   if (!params.prompt.trim()) {
     throw new Error('Prompt must not be empty');
@@ -26,6 +38,8 @@ export function createTodoList(params: {
     id: params.id,
     prompt: params.prompt.trim(),
     items: params.items,
+    messages: params.messages ?? [],
+    completed: params.completed ?? false,
     createdAt: params.createdAt,
   };
 }

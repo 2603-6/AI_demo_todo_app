@@ -13,6 +13,32 @@ interface GetTodoListRequest {
 
 interface ListTodoListsRequest {}
 
+interface SendMessageRequest {
+  list_id: string;
+  message: string;
+}
+
+interface ListSummaryMessage {
+  id: string;
+  prompt: string;
+}
+
+interface DetectIntentRequest {
+  prompt: string;
+  lists: ListSummaryMessage[];
+}
+
+interface DetectIntentResponse {
+  action: string;
+  list_id: string;
+  message: string;
+}
+
+interface CompleteTodoListRequest {
+  id: string;
+  completed: boolean;
+}
+
 interface UpdateTodoItemRequest {
   id: string;
   completed: boolean;
@@ -31,11 +57,21 @@ interface TodoItemMessage {
   position: number;
 }
 
+interface ConversationMessageMessage {
+  id: string;
+  list_id: string;
+  role: string;
+  content: string;
+  position: number;
+}
+
 interface TodoListResponse {
   id: string;
   prompt: string;
   items: TodoItemMessage[];
   created_at: string;
+  messages: ConversationMessageMessage[];
+  completed: boolean;
 }
 
 interface TodoListsResponse {
@@ -54,6 +90,14 @@ function toTodoListResponse(list: TodoList): TodoListResponse {
       position: item.position,
     })),
     created_at: list.createdAt.toISOString(),
+    messages: list.messages.map((msg) => ({
+      id: msg.id,
+      list_id: msg.listId,
+      role: msg.role,
+      content: msg.content,
+      position: msg.position,
+    })),
+    completed: list.completed,
   };
 }
 
@@ -116,6 +160,51 @@ export function createTodoGrpcHandlers(todoService: TodoService) {
       todoService
         .updateTodoItem(call.request.id, call.request.completed)
         .then(() => callback(null, { id: call.request.id, completed: call.request.completed }))
+        .catch((err: unknown) => {
+          callback({
+            code: GrpcStatus.INTERNAL,
+            message: err instanceof Error ? err.message : 'Internal error',
+          });
+        });
+    },
+
+    SendMessage(
+      call: ServerUnaryCall<SendMessageRequest, TodoListResponse>,
+      callback: sendUnaryData<TodoListResponse>,
+    ): void {
+      todoService
+        .sendMessage(call.request.list_id, call.request.message)
+        .then((list) => callback(null, toTodoListResponse(list)))
+        .catch((err: unknown) => {
+          const message = err instanceof Error ? err.message : 'Internal error';
+          const code = message === 'List not found' ? GrpcStatus.NOT_FOUND : GrpcStatus.INTERNAL;
+          callback({ code, message });
+        });
+    },
+
+    CompleteTodoList(
+      call: ServerUnaryCall<CompleteTodoListRequest, TodoListResponse>,
+      callback: sendUnaryData<TodoListResponse>,
+    ): void {
+      todoService
+        .completeTodoList(call.request.id, call.request.completed)
+        .then((list) => callback(null, toTodoListResponse(list)))
+        .catch((err: unknown) => {
+          const message = err instanceof Error ? err.message : 'Internal error';
+          const code = message === 'List not found' ? GrpcStatus.NOT_FOUND : GrpcStatus.INTERNAL;
+          callback({ code, message });
+        });
+    },
+
+    DetectIntent(
+      call: ServerUnaryCall<DetectIntentRequest, DetectIntentResponse>,
+      callback: sendUnaryData<DetectIntentResponse>,
+    ): void {
+      todoService
+        .detectIntent(call.request.prompt, call.request.lists)
+        .then((result) =>
+          callback(null, { action: result.action, list_id: result.listId, message: result.message }),
+        )
         .catch((err: unknown) => {
           callback({
             code: GrpcStatus.INTERNAL,

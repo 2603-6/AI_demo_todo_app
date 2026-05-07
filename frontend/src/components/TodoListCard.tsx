@@ -14,24 +14,27 @@ export function TodoListCard({ list, active, onClick }: Props) {
     year: 'numeric',
   });
 
-  const completed = list.items.filter((i) => i.completed).length;
+  const completedItems = list.items.filter((i) => i.completed).length;
 
   return (
     <button
-      className={`${styles.card} ${active ? styles.active : ''}`}
+      className={`${styles.card} ${active ? styles.active : ''} ${list.completed ? styles.listDone : ''}`}
       onClick={onClick}
     >
-      <p className={styles.prompt}>{list.prompt}</p>
+      <div className={styles.promptRow}>
+        <p className={styles.prompt}>{list.prompt}</p>
+        {list.completed && <span className={styles.doneBadge}>Done</span>}
+      </div>
       <div className={styles.meta}>
         <span className={styles.count}>
-          {completed}/{list.items.length} done
+          {completedItems}/{list.items.length} done
         </span>
         <span className={styles.date}>{date}</span>
       </div>
       <div className={styles.progressTrack}>
         <div
-          className={styles.progressBar}
-          style={{ width: list.items.length ? `${(completed / list.items.length) * 100}%` : '0%' }}
+          className={`${styles.progressBar} ${list.completed ? styles.progressDone : ''}`}
+          style={{ width: list.items.length ? `${(completedItems / list.items.length) * 100}%` : '0%' }}
         />
       </div>
     </button>
